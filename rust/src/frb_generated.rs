@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -263513938;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2070437045;
 
 // Section: executor
 
@@ -163,6 +163,59 @@ fn wire__crate__api__tajweed_rules_base__process_verse_impl(
                         api_verse,
                         api_style,
                         &*api_processor_warsh_guard,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__tajweed_rules_base__process_verse_with_zwj_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "process_verse_with_zwj",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_verse = <String>::sse_decode(&mut deserializer);
+            let api_processor = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TajweedRulesProcessor>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_processor_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_processor,
+                            0,
+                            false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_processor_guard = Some(api_processor.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_processor_guard = api_processor_guard.unwrap();
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::tajweed_rules_base::process_verse_with_zwj(
+                        api_verse,
+                        &*api_processor_guard,
                     ))?;
                 Ok(output_ok)
             })())
@@ -391,7 +444,12 @@ fn pde_ffi_dispatcher_sync_impl(
     match func_id {
         1 => wire__crate__api__tajweed_rules_base__get_version_impl(ptr, rust_vec_len, data_len),
         3 => wire__crate__api__tajweed_rules_base__process_verse_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__tajweed_rules_base__tajweed_rules_init_impl(
+        4 => wire__crate__api__tajweed_rules_base__process_verse_with_zwj_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        5 => wire__crate__api__tajweed_rules_base__tajweed_rules_init_impl(
             ptr,
             rust_vec_len,
             data_len,

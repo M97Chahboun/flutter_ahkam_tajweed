@@ -23,8 +23,16 @@ class TajweedRules {
     processorWarsh: processorWarsh,
   );
 
+  static String processVerseWithZwj({
+    required String verse,
+    required TajweedRulesProcessor processor,
+  }) => RustLib.instance.api.crateApiTajweedRulesBaseProcessVerseWithZwj(
+    verse: verse,
+    processor: processor,
+  );
+
   /// Get app version
-  String getVersion() =>
+  static String getVersion() =>
       RustLib.instance.api.crateApiTajweedRulesBaseGetVersion();
 }
 

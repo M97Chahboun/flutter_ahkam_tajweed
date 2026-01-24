@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -263513938;
+  int get rustContentHash => 2070437045;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -85,6 +85,11 @@ abstract class RustLibApi extends BaseApi {
     required String verse,
     required RecitationStyleType style,
     required TajweedRulesProcessor processorWarsh,
+  });
+
+  String crateApiTajweedRulesBaseProcessVerseWithZwj({
+    required String verse,
+    required TajweedRulesProcessor processor,
   });
 
   TajweedRulesProcessor crateApiTajweedRulesBaseTajweedRulesInit();
@@ -192,12 +197,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  String crateApiTajweedRulesBaseProcessVerseWithZwj({
+    required String verse,
+    required TajweedRulesProcessor processor,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(verse, serializer);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTajweedRulesProcessor(
+            processor,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTajweedRulesBaseProcessVerseWithZwjConstMeta,
+        argValues: [verse, processor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTajweedRulesBaseProcessVerseWithZwjConstMeta =>
+      const TaskConstMeta(
+        debugName: "process_verse_with_zwj",
+        argNames: ["verse", "processor"],
+      );
+
+  @override
   TajweedRulesProcessor crateApiTajweedRulesBaseTajweedRulesInit() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
         },
         codec: SseCodec(
           decodeSuccessData:
