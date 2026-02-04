@@ -1,488 +1,46 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tajweed_rules/tajweed_rules.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await RustLib.init();
-  runApp(const TajweedApp());
-}
-
-class TajweedApp extends StatelessWidget {
-  const TajweedApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'أحكام التجويد',
-      locale: Locale("ar"),
-      theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-      home: const TajweedHomePage(),
-      // Set the default text direction to RTL
-      builder: (context, child) {
-        return Directionality(textDirection: TextDirection.rtl, child: child!);
-      },
-    );
-  }
-}
-
-class TajweedHomePage extends StatefulWidget {
-  const TajweedHomePage({super.key});
-
-  @override
-  State<TajweedHomePage> createState() => _TajweedHomePageState();
-}
-
-class _TajweedHomePageState extends State<TajweedHomePage> {
-  final TextEditingController _verseController = TextEditingController();
-  TajweedRulesProcessor? _processor;
-  List<TajweedRuleMatch> _matches = [];
-  RecitationStyleType _selectedStyle = RecitationStyleType.hafs;
-  bool _isLoading = false;
-  String? _version;
-  int _currentPageIndex = 0;
-  String _originalVerse = '';
-  String _displayVerse = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeProcessor();
-    _loadVersion();
-  }
-
-  Future<void> _initializeProcessor() async {
-    try {
-      _processor = TajweedRules.tajweedRulesInit();
-      setState(() {});
-    } catch (e) {
-      _showError('فشل تهيئة المعالج: $e');
-    }
-  }
-
-  Future<void> _loadVersion() async {
-    try {
-      final version = TajweedRules.getVersion();
-      setState(() {
-        _version = version;
-      });
-    } catch (e) {
-      print('Failed to load version: $e');
-    }
-  }
-
-  Future<void> _processVerse() async {
-    if (_verseController.text.isEmpty) {
-      _showError('الرجاء إدخال آية');
-      return;
-    }
-
-    if (_processor == null) {
-      _showError('لم يتم تهيئة المعالج');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _matches = [];
-    });
-
-    try {
-      final originalVerse = _verseController.text;
-
-      // First process the verse to get matches (based on original verse)
-      final matches = TajweedRules.processVerse(
-        verse: originalVerse,
-        style: _selectedStyle,
-        processorWarsh: _processor!,
-      );
-
-      // Then apply ZWJ for display rendering
-      final zwjVerse = TajweedRules.processVerseWithZwj(
-        verse: originalVerse,
-        processor: _processor!,
-      );
-
-      setState(() {
-        _originalVerse = originalVerse;
-        _displayVerse = zwjVerse;
-        _matches = matches;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showError('فشل معالجة الآية: $e');
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  @override
-  void dispose() {
-    _verseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('محلل أحكام التجويد'),
-        actions: [
-          if (_version != null)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('$_version', style: const TextStyle(fontSize: 12)),
-              ),
-            ),
-        ],
-      ),
-      body: _currentPageIndex == 0
-          ? _buildAnalyzerPage()
-          : _buildColoredTextPage(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentPageIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _currentPageIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.list), label: 'قائمة الأحكام'),
-          NavigationDestination(
-            icon: Icon(Icons.palette),
-            label: 'النص الملون',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalyzerPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'أدخل آية قرآنية',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _verseController,
-                    maxLines: 3,
-                    textDirection: TextDirection.rtl,
-                    style: const TextStyle(fontSize: 24),
-                    decoration: const InputDecoration(
-                      hintText: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-                      hintTextDirection: TextDirection.rtl,
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'أسلوب القراءة',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<RecitationStyleType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: RecitationStyleType.hafs,
-                        label: Text('حفص'),
-                      ),
-                      ButtonSegment(
-                        value: RecitationStyleType.warsh,
-                        label: Text('ورش'),
-                      ),
-                      ButtonSegment(
-                        value: RecitationStyleType.both,
-                        label: Text('كلاهما'),
-                      ),
-                    ],
-                    selected: {_selectedStyle},
-                    onSelectionChanged: (Set<RecitationStyleType> selected) {
-                      setState(() {
-                        _selectedStyle = selected.first;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isLoading ? null : _processVerse,
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.search),
-                      label: Text(_isLoading ? 'جاري المعالجة...' : 'تحليل'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (_matches.isNotEmpty) ...[
-            Text(
-              'تم العثور على ${_matches.length} حكم تجويدي',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _matches.length,
-              itemBuilder: (context, index) {
-                final match = _matches[index];
-                return TajweedRuleCard(match: match, index: index);
-              },
-            ),
-          ] else if (!_isLoading && _verseController.text.isNotEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'لم يتم العثور على أي أحكام تجوية في هذه الآية',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildColoredTextPage() {
-    if (_verseController.text.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.text_fields, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'أدخل آية في علامة التبويب قائمة الأحكام\nلرؤية نص التجويد الملون',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: InteractiveTajweedText(
-                originalVerse: _originalVerse,
-                displayVerse: _displayVerse,
-                matches: _matches,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'للحصول على التفاصيل، انقر على حرف الحكم',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'مفتاح الألوان',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._matches.toSet().toList().map((match) {
-                    return _buildLegendItem(
-                      TajweedColors.getColorForRule(
-                        match.ruleEnglishName,
-                        match.isWarshSpecific,
-                      ),
-                      match.description,
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
-        ],
-      ),
-    );
-  }
-}
-
-class TajweedColors {
-  static const Color ghunna = Color(0xFFAACCFF);
-  static const Color ikhfa = Color(0xFF9BE89B);
-  static const Color idghaam = Color(0xFFFFAAAA);
-  static const Color iqlab = Color(0xFFFFCC99);
-  static const Color qalqalah = Color(0xFFDD99FF);
-  static const Color madd = Color(0xFFFF9999);
-  static const Color laamShamsiyah = Color(0xFFFFEE99);
-  static const Color warshSpecific = Color(0xFFDDA0DD);
-  static const Color defaultColor = Colors.black;
-
-  static String _normalizeRuleKey(String ruleName) {
-    return ruleName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '_')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_$'), '');
-  }
-
-  static final tajweedColorMap = <String, Color>{
-    // Noon Saakinah Rules - Izhar (Clarity)
-    'al_izhar_al_halqi': Color(0xFF00BCD4),
-    'al_izhar_al_mutlaq': Color(0xFF00BCD4),
-
-    // Noon Saakinah Rules - Idgham (Assimilation)
-    'idgham_with_ghunnah': Color(0xFF2196F3),
-    'idgham_naqis_incomplete': Color(0xFF1976D2),
-    'idgham_kamil_complete': Color(0xFF1565C0),
-    'idgham_without_ghunnah': Color(0xFF0D47A1),
-
-    // Noon Saakinah Rules - Iqlab (Conversion)
-    'al_iqlab': Color(0xFFFF9800),
-
-    // Noon Saakinah Rules - Ikhfaa (Concealment)
-    'al_ikhfaa_al_haqiqi': Color(0xFFE91E63),
-    'al_ikhfaa_al_shafawi': Color(0xFFC2185B),
-
-    // Meem Saakinah Rules
-    'al_idgham_al_shafawi': Color(0xFF42A5F5),
-    'al_izhar_al_shafawi': Color(0xFF4DD0E1),
-
-    // Definite Article (AL) Rules
-    'al_izhar_al_qamari': Color(0xFF29B6F6),
-    'al_idgham_al_shamsi': Color(0xFF1E88E5),
-
-    // Madd (Elongation) Rules - Natural Madd
-    'madd_tabeei': Color(0xFF4CAF50),
-
-    // Madd Rules - Connected
-    'madd_muttasil': Color(0xFF43A047),
-
-    // Madd Rules - Separated
-    'madd_munfasil': Color(0xFF388E3C),
-
-    // Madd Rules - Badal
-    'madd_badal': Color(0xFF2E7D32),
-
-    // Madd Rules - Obligatory/Emphatic
-    'madd_lazim': Color(0xFF1B5E20),
-
-    // Madd Rules - Accidental
-    'madd_arid': Color(0xFF558B2F),
-
-    // Madd Rules - Soft
-    'madd_lin': Color(0xFF689F38),
-
-    // Special Rules - Silah (Soft connection)
-    'madd_silah': Color(0xFF9C27B0),
-
-    // Ra Rules - Thinness (Tarqeeq)
-    'tarqeeq_ra': Color(0xFFFBC02D),
-
-    // Ra Rules - Emphasis (Tafkhim)
-    'tafkhim_ra': Color(0xFFF44336),
-    'tafkhim_lafz_al_jalalah': Color(0xFFD32F2F),
-
-    // Qalqalah (Shaking/Echo) Rules
-    'qalqalah_kubra_major': Color(0xFFFF6F00),
-    'qalqalah_sughra_minor': Color(0xFFE65100),
-
-    // Waqf (Stop) Rules
-    'waqf_jaiz': Color(0xFF9E9E9E),
-    'waqf_awla': Color(0xFF757575),
-    'wasl_awla': Color(0xFF616161),
-    'waqf_muanaqah': Color(0xFF424242),
-    'sakt': Color(0xFF212121),
-  };
-
-  static Color getColorForRule(String ruleEnglishName, bool isWarshSpecific) {
-    final textColor =
-        tajweedColorMap[_normalizeRuleKey(ruleEnglishName)] ?? defaultColor;
-    return textColor;
-  }
-}
-
-class InteractiveTajweedText extends StatelessWidget {
+class InteractiveTajweedText extends StatefulWidget {
   final String originalVerse;
-  final String displayVerse;
-  final List<TajweedRuleMatch> matches;
+  final RecitationStyleType style;
 
   const InteractiveTajweedText({
     super.key,
     required this.originalVerse,
-    required this.displayVerse,
-    required this.matches,
+    this.style = RecitationStyleType.both,
   });
 
   @override
+  State<InteractiveTajweedText> createState() => _InteractiveTajweedTextState();
+}
+
+class _InteractiveTajweedTextState extends State<InteractiveTajweedText> {
+  List<TajweedRuleMatch> matches = [];
+  String displayVerse = '';
+  @override
+  void initState() {
+    super.initState();
+    final processor = TajweedRules.tajweedRulesInit();
+    // First process the verse to get matches (based on original verse)
+    matches = TajweedRules.processVerse(
+      verse: widget.originalVerse,
+      style: widget.style,
+      processorWarsh: processor,
+    );
+
+    // Then apply ZWJ for display rendering
+    displayVerse = TajweedRules.processVerseWithZwj(
+      verse: widget.originalVerse,
+      processor: processor,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Early return for empty matches
     if (matches.isEmpty) {
       return Text(
         displayVerse,
@@ -491,37 +49,70 @@ class InteractiveTajweedText extends StatelessWidget {
       );
     }
 
+    // Build the rich text with Tajweed rules
+    return RichText(
+      textDirection: TextDirection.rtl,
+      text: TextSpan(
+        style: const TextStyle(fontSize: 32, height: 2.0),
+        children: _buildTajweedSpans(context),
+      ),
+    );
+  }
+
+  /// Builds text spans with Tajweed rule highlighting
+  List<TextSpan> _buildTajweedSpans(BuildContext context) {
     // Create a map to track which characters in original verse have rules applied
-    final Map<int, TajweedRuleMatch> charRuleMatches = {};
+    final charRuleMatches = <int, TajweedRuleMatch>{};
 
     for (final match in matches) {
       final startIdx = match.startIndex.toInt();
-      final endIdx = match.endIndex.toInt();
+      int endIdx = match.endIndex.toInt();
+
+      // Comprehensive validation
+      if (startIdx < 0 || endIdx > widget.originalVerse.length) {
+        if (kDebugMode) {
+          print(
+            '❌ Match indices out of bounds: '
+            'start=$startIdx, end=$endIdx, length=${widget.originalVerse.length}',
+          );
+        }
+        continue;
+      }
+
+      // ✅ CRITICAL: Skip empty matches (indicates Rust detection bug)
+      if (startIdx >= endIdx) {
+        endIdx++;
+      }
 
       // Mark all characters in this range with the rule match
-      for (int i = startIdx; i < endIdx && i < originalVerse.length; i++) {
+      for (int i = startIdx; i < endIdx; i++) {
+        // Optional: Warn about overlapping rules
+        if (charRuleMatches.containsKey(i) && kDebugMode) {
+          print(
+            '⚠️ Overlapping rules at index $i: '
+            '${charRuleMatches[i]?.ruleEnglishName} -> ${match.ruleEnglishName}',
+          );
+        }
         charRuleMatches[i] = match;
       }
     }
 
     // Build text spans for the display verse (with ZWJ)
-    // We need to map the colors from original verse positions to display verse
     final spans = <TextSpan>[];
     int originalIdx = 0;
     int displayIdx = 0;
 
     while (displayIdx < displayVerse.length &&
-        originalIdx < originalVerse.length) {
-      final currentRuleMatch = charRuleMatches[originalIdx];
-      int spanStart = displayIdx;
-      TajweedRuleMatch? spanRuleMatch = currentRuleMatch;
+        originalIdx < widget.originalVerse.length) {
+      final spanStart = displayIdx;
+      final spanRuleMatch = charRuleMatches[originalIdx];
 
       // Find the extent of this rule span
       while (displayIdx < displayVerse.length &&
-          originalIdx < originalVerse.length) {
+          originalIdx < widget.originalVerse.length) {
         final charAtDisplay = displayVerse[displayIdx];
 
-        // Check if we've hit a ZWJ character (which doesn't exist in original)
+        // Skip ZWJ characters (which don't exist in original)
         if (charAtDisplay == '\u200D') {
           displayIdx++;
           continue;
@@ -529,8 +120,7 @@ class InteractiveTajweedText extends StatelessWidget {
 
         // Check if rule changed
         final nextRuleMatch = charRuleMatches[originalIdx];
-        if (nextRuleMatch?.ruleEnglishName != spanRuleMatch?.ruleEnglishName ||
-            nextRuleMatch?.isWarshSpecific != spanRuleMatch?.isWarshSpecific) {
+        if (_hasRuleChanged(nextRuleMatch, spanRuleMatch)) {
           break;
         }
 
@@ -540,79 +130,83 @@ class InteractiveTajweedText extends StatelessWidget {
 
       // Add the span
       if (displayIdx > spanStart) {
-        final textContent = displayVerse.substring(spanStart, displayIdx);
-        final color = spanRuleMatch != null
-            ? TajweedColors.getColorForRule(
-                spanRuleMatch.ruleEnglishName,
-                spanRuleMatch.isWarshSpecific,
-              )
-            : TajweedColors.defaultColor;
-
-        TextSpan span;
-        if (spanRuleMatch != null) {
-          // Create interactive span with gesture detection
-          span = TextSpan(
-            text: textContent,
-            style: TextStyle(
-              color: color,
-              fontSize: 32,
-              height: 2.0,
-              fontWeight: FontWeight.normal,
-              shadows: [
-                Shadow(
-                  offset: Offset.zero,
-                  blurRadius: 0,
-                  color: Colors.transparent,
-                ), // This helps with the clickable effect
-              ],
-            ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                _showRuleTooltip(context, spanRuleMatch);
-              },
-          );
-        } else {
-          // Regular span without interaction
-          span = TextSpan(
-            text: textContent,
-            style: TextStyle(
-              color: color,
-              fontSize: 32,
-              height: 2.0,
-              fontWeight: FontWeight.normal,
-            ),
-          );
-        }
-
-        spans.add(span);
+        spans.add(
+          _createTextSpan(
+            context,
+            displayVerse.substring(spanStart, displayIdx),
+            spanRuleMatch,
+          ),
+        );
       }
     }
 
     // Add any remaining display text
     if (displayIdx < displayVerse.length) {
       spans.add(
-        TextSpan(
-          text: displayVerse.substring(displayIdx),
-          style: const TextStyle(
-            color: TajweedColors.defaultColor,
-            fontSize: 32,
-            height: 2.0,
-            fontWeight: FontWeight.normal,
-          ),
-        ),
+        _createTextSpan(context, displayVerse.substring(displayIdx), null),
       );
     }
 
-    return RichText(
-      textDirection: TextDirection.rtl,
-      text: TextSpan(
-        style: const TextStyle(fontSize: 32, height: 2.0),
-        children: spans,
-      ),
-    );
+    return spans;
   }
 
-  void _showRuleTooltip(BuildContext context, TajweedRuleMatch ruleMatch) {
+  /// Checks if the Tajweed rule has changed between two matches
+  bool _hasRuleChanged(TajweedRuleMatch? next, TajweedRuleMatch? current) {
+    if (next == current) return false;
+    if (next == null || current == null) return next != current;
+
+    return next.ruleEnglishName != current.ruleEnglishName ||
+        next.isWarshSpecific != current.isWarshSpecific;
+  }
+
+  /// Creates a text span with optional Tajweed rule highlighting and interaction
+  TextSpan _createTextSpan(
+    BuildContext context,
+    String text,
+    TajweedRuleMatch? ruleMatch,
+  ) {
+    final color = ruleMatch != null
+        ? TajweedColors.getColorForRule(
+            ruleMatch.ruleEnglishName,
+            ruleMatch.isWarshSpecific,
+          )
+        : TajweedColors.defaultColor;
+
+    final baseStyle = TextStyle(
+      color: color,
+      fontSize: 32,
+      height: 2.0,
+      fontWeight: FontWeight.normal,
+    );
+
+    if (ruleMatch != null) {
+      // Create interactive span with gesture detection
+      return TextSpan(
+        text: text,
+        style: baseStyle,
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            _showRuleTooltip(context, ruleMatch, widget.originalVerse);
+          },
+      );
+    } else {
+      // Regular span without interaction
+      return TextSpan(text: text, style: baseStyle);
+    }
+  }
+
+  /// Safely extracts substring with bounds checking
+  String _safeSubstring(String text, int start, int end) {
+    final safeStart = start.clamp(0, text.length);
+    final safeEnd = end.clamp(safeStart, text.length);
+    return text.substring(safeStart, safeEnd);
+  }
+
+  void _showRuleTooltip(
+    BuildContext context,
+    TajweedRuleMatch ruleMatch,
+    String originalVerse,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -636,7 +230,7 @@ class InteractiveTajweedText extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    ruleMatch.ruleEnglishName,
+                    ruleMatch.ruleArabicName,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -741,6 +335,16 @@ class InteractiveTajweedText extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Extract the word where the rule applies
+                        _buildInfoRow(
+                          'االمقطع',
+                          _extractWordFromVerse(
+                            originalVerse,
+                            ruleMatch.startIndex.toInt(),
+                            ruleMatch.endIndex.toInt(),
+                          ),
+                          isArabic: true,
+                        ),
                         _buildInfoRow(
                           'الحرف المستهدف',
                           ruleMatch.targetLetter,
@@ -807,6 +411,38 @@ class InteractiveTajweedText extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _extractWordFromVerse(String verse, int startIndex, int endIndex) {
+    if (verse.isEmpty ||
+        startIndex < 0 ||
+        endIndex > verse.length ||
+        startIndex >= endIndex) {
+      return '';
+    }
+
+    // Extract the substring containing the rule application
+    String targetSubstring = verse.substring(startIndex, endIndex);
+
+    // Find the boundaries of the word containing this substring
+    int wordStart = startIndex;
+    int wordEnd = endIndex;
+
+    // Expand backwards to find the start of the word (stop at space or beginning)
+    while (wordStart > 0 && !RegExp(r'\s').hasMatch(verse[wordStart - 1])) {
+      wordStart--;
+    }
+
+    // Expand forwards to find the end of the word (stop at space or end)
+    while (wordEnd < verse.length && !RegExp(r'\s').hasMatch(verse[wordEnd])) {
+      wordEnd++;
+    }
+
+    // Extract the full word
+    String word = verse.substring(wordStart, wordEnd);
+
+    // Return the word containing the rule application
+    return word.trim();
   }
 
   Widget _buildInfoRow(String label, String value, {bool isArabic = false}) {
@@ -1085,5 +721,92 @@ class TajweedRuleCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class TajweedColors {
+  static const Color defaultColor = Colors.black;
+
+  static String _normalizeRuleKey(String ruleName) {
+    return ruleName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  static final tajweedColorMap = <String, Color>{
+    // Noon Saakinah Rules - Izhar (Clarity)
+    'al_izhar_al_halqi': Color(0xFF00BCD4),
+    'al_izhar_al_mutlaq': Color(0xFF00BCD4),
+
+    // Noon Saakinah Rules - Idgham (Assimilation)
+    'idgham_with_ghunnah': Color(0xFF2196F3),
+    'idgham_naqis_incomplete': Color(0xFF1976D2),
+    'idgham_kamil_complete': Color(0xFF1565C0),
+    'idgham_without_ghunnah': Color(0xFF0D47A1),
+
+    // Noon Saakinah Rules - Iqlab (Conversion)
+    'al_iqlab': Color(0xFFFF9800),
+
+    // Noon Saakinah Rules - Ikhfaa (Concealment)
+    'al_ikhfaa_al_haqiqi': Color(0xFFE91E63),
+    'al_ikhfaa_al_shafawi': Color(0xFFC2185B),
+
+    // Meem Saakinah Rules
+    'al_idgham_al_shafawi': Color(0xFF42A5F5),
+    'al_izhar_al_shafawi': Color(0xFF4DD0E1),
+
+    // Definite Article (AL) Rules
+    'al_izhar_al_qamari': Color(0xFF29B6F6),
+    'al_idgham_al_shamsi': Color(0xFF1E88E5),
+
+    // Madd (Elongation) Rules - Natural Madd
+    'madd_tabeei': Color(0xFF4CAF50),
+
+    // Madd Rules - Connected
+    'madd_muttasil': Color(0xFF43A047),
+
+    // Madd Rules - Separated
+    'madd_munfasil': Color(0xFF388E3C),
+
+    // Madd Rules - Badal
+    'madd_badal': Color(0xFF2E7D32),
+
+    // Madd Rules - Obligatory/Emphatic
+    'madd_lazim': Color(0xFF1B5E20),
+
+    // Madd Rules - Accidental
+    'madd_arid': Color(0xFF558B2F),
+
+    // Madd Rules - Soft
+    'madd_lin': Color(0xFF689F38),
+
+    // Special Rules - Silah (Soft connection)
+    'madd_silah': Color(0xFF9C27B0),
+
+    // Ra Rules - Thinness (Tarqeeq)
+    'tarqeeq_ra': Color(0xFFFBC02D),
+
+    // Ra Rules - Emphasis (Tafkhim)
+    'tafkhim_ra': Color(0xFFF44336),
+    'tafkhim_lafz_al_jalalah': Color(0xFFD32F2F),
+
+    // Qalqalah (Shaking/Echo) Rules
+    'qalqalah_kubra_major': Color(0xFFFF6F00),
+    'qalqalah_sughra_minor': Color(0xFFE65100),
+
+    // Waqf (Stop) Rules
+    'waqf_jaiz': Color(0xFF9E9E9E),
+    'waqf_awla': Color(0xFF757575),
+    'wasl_awla': Color(0xFF616161),
+    'waqf_muanaqah': Color(0xFF424242),
+    'sakt': Color(0xFF212121),
+  };
+
+  static Color getColorForRule(String ruleEnglishName, bool isWarshSpecific) {
+    final textColor =
+        tajweedColorMap[_normalizeRuleKey(ruleEnglishName)] ?? defaultColor;
+    return textColor;
   }
 }
