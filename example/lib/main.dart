@@ -276,39 +276,12 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                 OutlinedButton.icon(
                   onPressed: isSubmitting
                       ? null
-                      : () async {
-                          final report = TajweedIssueReport(
-                            surahNumber: _selectedSurahId,
-                            surahName: _currentSurah.name,
-                            ayahNumber: _selectedAyahNumber,
-                            riwaya: _selectedStyle,
-                            verseText: _verseController.text.trim(),
-                            ruleArabicName: specificRuleName,
-                            ruleEnglishName: specificRuleEnglishName,
-                            issueType: selectedType,
-                            description: noteController.text.trim(),
-                            reporterContact: contactController.text.trim(),
-                          );
-                          await IssueReportingService.copyReportToClipboard(report);
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Row(
-                                  children: [
-                                    Icon(Icons.check_circle, color: Colors.white, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('تم نسخ تقرير الملاحظة بصيغة Markdown بنجاح!'),
-                                  ],
-                                ),
-                                backgroundColor: Color(0xFF0F766E),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
+                      : () {
+                          Navigator.of(context).pop();
+                          _openWhatsAppFeedback(specificRuleName: specificRuleName);
                         },
-                  icon: const Icon(Icons.copy, size: 16),
-                  label: const Text('نسخ'),
+                  icon: const Icon(Icons.chat, size: 16, color: Color(0xFF25D366)),
+                  label: const Text('تواصل مع صاحب المشروع'),
                 ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
@@ -358,39 +331,29 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
 
                             if (result.success) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Row(
+                                const SnackBar(
+                                  content: Row(
                                     children: [
                                       Icon(Icons.check_circle, color: Colors.white, size: 20),
                                       SizedBox(width: 8),
                                       Expanded(
-                                        child: Text('تم إرسال الملاحظة بنجاح وإنشاء التذكرة على GitHub!'),
+                                        child: Text('تم إرسال الملاحظة بنجاح، جزاكم الله خيراً!'),
                                       ),
                                     ],
                                   ),
-                                  action: result.issueUrl != null
-                                      ? SnackBarAction(
-                                          label: 'عرض التذكرة',
-                                          textColor: Colors.amberAccent,
-                                          onPressed: () {
-                                            launchUrl(Uri.parse(result.issueUrl!), mode: LaunchMode.externalApplication);
-                                          },
-                                        )
-                                      : null,
-                                  backgroundColor: const Color(0xFF0F766E),
+                                  backgroundColor: Color(0xFF0F766E),
                                   behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
+                                  duration: Duration(seconds: 4),
                                 ),
                               );
                             } else {
-                              // If proxy failed, offer direct fallback
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('تعذر الإرسال التلقائي: ${result.errorMessage ?? ""}'),
+                                  content: Text('تعذر الإرسال: ${result.errorMessage ?? ""}'),
                                   action: SnackBarAction(
-                                    label: 'فتح GitHub يدوياً',
+                                    label: 'تواصل عبر واتساب',
                                     textColor: Colors.white,
-                                    onPressed: () => IssueReportingService.openGitHubIssue(report),
+                                    onPressed: () => _openWhatsAppFeedback(specificRuleName: specificRuleName),
                                   ),
                                   backgroundColor: Colors.red.shade700,
                                   behavior: SnackBarBehavior.floating,
@@ -408,7 +371,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                         )
                       : const Icon(Icons.send_rounded, size: 16),
                   label: Text(
-                    isSubmitting ? 'جاري الإرسال...' : 'إرسال الملاحظة مباشرة',
+                    isSubmitting ? 'جاري الإرسال...' : 'إرسال الملاحظة',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
@@ -1310,7 +1273,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
         gradient: LinearGradient(
           colors: [
             const Color(0xFF0F766E).withValues(alpha: 0.08),
-            const Color(0xFF24292F).withValues(alpha: 0.05),
+            const Color(0xFF25D366).withValues(alpha: 0.08),
           ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
@@ -1323,17 +1286,17 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.bug_report_outlined, color: Color(0xFF0F766E), size: 22),
+              Icon(Icons.rate_review_outlined, color: Color(0xFF0F766E), size: 22),
               SizedBox(width: 8),
               Text(
-                'مركز الإبلاغ وتتبع الملاحظات (GitHub Issues)',
+                'مركز الملاحظات والتصويبات التجويدية',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'مشروع أحكام التجويد مفتوح المصدر ومستمر في التطوير. لضمان عدم ضياع أي ملاحظة وتتبعها كمرجع موحد، يمكنكم فتح تذكرة مباشرة على GitHub مع تعبئة التفاصيل والآية والرواية آلياً.',
+            'مشروع أحكام التجويد مفتوح المصدر ومستمر في التطوير. إذا لاحظت أي خطأ أو حالة استثنائية، يسعدنا إرسال ملاحظتك مباشرة بنقرة واحدة لتصويبها، أو مراسلة صاحب المشروع عبر الواتساب.',
             style: TextStyle(fontSize: 14, height: 1.6, color: Colors.grey.shade800),
           ),
           const SizedBox(height: 14),
@@ -1343,15 +1306,15 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
             children: [
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF24292F),
+                  backgroundColor: const Color(0xFF0F766E),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => _showFeedbackDialog(),
-                icon: const Icon(Icons.open_in_new, color: Colors.white, size: 18),
+                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                 label: const Text(
-                  'فتح تذكرة على GitHub Issues',
+                  'إرسال ملاحظة من التطبيق',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
                 ),
               ),
@@ -1362,7 +1325,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                 ),
                 onPressed: () => _openWhatsAppFeedback(),
                 icon: const Icon(Icons.chat, size: 18, color: Color(0xFF25D366)),
-                label: const Text('تواصل عبر واتساب'),
+                label: const Text('تواصل مع صاحب المشروع عبر واتساب'),
               ),
             ],
           ),
