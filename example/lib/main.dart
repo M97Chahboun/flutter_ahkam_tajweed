@@ -626,6 +626,8 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildFeedbackContactBanner(),
+          const SizedBox(height: 16),
           _buildQuranpediaSelectorCard(),
           const SizedBox(height: 16),
           _buildInputAndControlsCard(),
@@ -1024,6 +1026,8 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildFeedbackContactBanner(),
+          const SizedBox(height: 16),
           Card(
             elevation: 1,
             color: Colors.white,
@@ -1156,8 +1160,6 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _buildFeedbackContactBanner(),
         ],
       ),
     );
