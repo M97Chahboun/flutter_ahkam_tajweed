@@ -679,8 +679,6 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
-          _buildFeedbackContactBanner(),
         ],
       ),
     );
