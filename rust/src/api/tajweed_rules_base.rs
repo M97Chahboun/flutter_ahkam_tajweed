@@ -110,8 +110,7 @@ pub fn get_version() -> String {
     tajweed_rules::VERSION.to_string()
 }
 
-#[flutter_rust_bridge::frb(init)]
+#[flutter_rust_bridge::frb(sync)]
 pub fn init_app() {
-    // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
 }

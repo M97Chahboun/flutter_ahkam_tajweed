@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "tathbeet-bb0e0"
+  },
+  "targets": {
+    "tathbeet-bb0e0": {
+      "hosting": {
+        "ahkam-tajweed": [
+          "ahkam-tajweed"
+        ]
+      }
+    }
+  }
+}
