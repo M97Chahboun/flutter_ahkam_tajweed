@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tajweed_rules/tajweed_rules.dart';
 import 'package:tajweed_rules/tajweed_rules.dart' as tajweed_lib;
 import 'package:url_launcher/url_launcher.dart';
+import 'services/issue_reporting_service.dart';
 import 'services/quranpedia_service.dart';
 
 Future<void> main() async {
@@ -154,79 +155,189 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
     }
   }
 
-  void _showFeedbackDialog({String? specificRuleName}) {
+  void _showFeedbackDialog({String? specificRuleName, String? specificRuleEnglishName}) {
     final noteController = TextEditingController();
+    final contactController = TextEditingController();
+    TajweedIssueType selectedType = TajweedIssueType.incorrectRule;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.feedback_outlined, color: Color(0xFF0F766E)),
-              SizedBox(width: 10),
-              Text('إبلاغ عن حكم غير دقيق أو ملاحظة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'نسعد بملاحظاتكم وتصويباتكم القرآنية لتطوير المحرك التجويدي بدقة متناهية.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F766E).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.bug_report, color: Color(0xFF0F766E), size: 24),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'الإبلاغ عن ملاحظة أو خطأ تجويدي',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                   ),
+                ],
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('• السورة: ${_currentSurah.name} (الآية: $_selectedAyahNumber)', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('• الرواية: $_styleName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      if (specificRuleName != null)
-                        Text('• الحكم: $specificRuleName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F766E))),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F766E).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF0F766E).withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• السورة: ${_currentSurah.name} (الآية: $_selectedAyahNumber)',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('• الرواية: $_styleName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            if (specificRuleName != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '• الحكم المعني: $specificRuleName',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F766E)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'نوع الملاحظة:',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: TajweedIssueType.values.map((type) {
+                          final isSelected = selectedType == type;
+                          return ChoiceChip(
+                            label: Text(
+                              type.arabicLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: const Color(0xFF0F766E),
+                            onSelected: (selected) {
+                              if (selected) {
+                                setDialogState(() {
+                                  selectedType = type;
+                                });
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: noteController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'تفاصيل الملاحظة والنتيجة المتوقعة *',
+                          hintText: 'مثال: في كلمة (كَمِثْلِهِ) يجب استخراج حكم كذا لأن...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: contactController,
+                        decoration: const InputDecoration(
+                          labelText: 'الاسم أو وسيلة التواصل (اختياري)',
+                          hintText: 'اسمك أو حسابك للمتابعة',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'اكتب ملاحظتك (اختياري)',
-                    hintText: 'مثال: في كلمة كذا الحكم الصحيح هو...',
-                    border: OutlineInputBorder(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('إلغاء'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final report = TajweedIssueReport(
+                      surahNumber: _selectedSurahId,
+                      surahName: _currentSurah.name,
+                      ayahNumber: _selectedAyahNumber,
+                      riwaya: _selectedStyle,
+                      verseText: _verseController.text.trim(),
+                      ruleArabicName: specificRuleName,
+                      ruleEnglishName: specificRuleEnglishName,
+                      issueType: selectedType,
+                      description: noteController.text.trim(),
+                      reporterContact: contactController.text.trim(),
+                    );
+                    await IssueReportingService.copyReportToClipboard(report);
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('تم نسخ تقرير الملاحظة بصيغة Markdown بنجاح!'),
+                            ],
+                          ),
+                          backgroundColor: Color(0xFF0F766E),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('نسخ التقرير'),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF24292F),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                  onPressed: () async {
+                    final report = TajweedIssueReport(
+                      surahNumber: _selectedSurahId,
+                      surahName: _currentSurah.name,
+                      ayahNumber: _selectedAyahNumber,
+                      riwaya: _selectedStyle,
+                      verseText: _verseController.text.trim(),
+                      ruleArabicName: specificRuleName,
+                      ruleEnglishName: specificRuleEnglishName,
+                      issueType: selectedType,
+                      description: noteController.text.trim(),
+                      reporterContact: contactController.text.trim(),
+                    );
+                    Navigator.of(context).pop();
+                    await IssueReportingService.openGitHubIssue(report);
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text(
+                    'فتح تذكرة على GitHub Issues',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
-              onPressed: () {
-                Navigator.of(context).pop();
-                final extraNote = noteController.text.trim();
-                _openWhatsAppFeedback(
-                  specificRuleName: specificRuleName != null && extraNote.isNotEmpty
-                      ? '$specificRuleName - $extraNote'
-                      : (extraNote.isNotEmpty ? extraNote : specificRuleName),
-                );
-              },
-              icon: const Icon(Icons.chat, color: Colors.white, size: 18),
-              label: const Text('إرسال عبر واتساب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -1122,7 +1233,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
         gradient: LinearGradient(
           colors: [
             const Color(0xFF0F766E).withValues(alpha: 0.08),
-            const Color(0xFF25D366).withValues(alpha: 0.08),
+            const Color(0xFF24292F).withValues(alpha: 0.05),
           ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
@@ -1135,17 +1246,17 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.contact_support_outlined, color: Color(0xFF0F766E), size: 22),
+              Icon(Icons.bug_report_outlined, color: Color(0xFF0F766E), size: 22),
               SizedBox(width: 8),
               Text(
-                'هل لاحظت حكماً غير دقيق أو استثناءً غير معالج؟',
+                'مركز الإبلاغ وتتبع الملاحظات (GitHub Issues)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'مشروع أحكام التجويد مفتوح المصدر ومستمر في التحسين والتطوير. إذا وجدت أي خطأ أو حالة استثنائية، يسعدنا جداً تواصلكم وتصويبكم عبر الواتساب مع نص الرسالة المجهز تلقائياً بالآية والرواية.',
+            'مشروع أحكام التجويد مفتوح المصدر ومستمر في التطوير. لضمان عدم ضياع أي ملاحظة وتتبعها كمرجع موحد، يمكنكم فتح تذكرة مباشرة على GitHub مع تعبئة التفاصيل والآية والرواية آلياً.',
             style: TextStyle(fontSize: 14, height: 1.6, color: Colors.grey.shade800),
           ),
           const SizedBox(height: 14),
@@ -1155,14 +1266,15 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
             children: [
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
+                  backgroundColor: const Color(0xFF24292F),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () => _openWhatsAppFeedback(),
-                icon: const Icon(Icons.chat, color: Colors.white, size: 20),
+                onPressed: () => _showFeedbackDialog(),
+                icon: const Icon(Icons.open_in_new, color: Colors.white, size: 18),
                 label: const Text(
-                  'تواصل عبر واتساب ($contactPhone)',
+                  'فتح تذكرة على GitHub Issues',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
                 ),
               ),
@@ -1171,9 +1283,9 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () => _showFeedbackDialog(),
-                icon: const Icon(Icons.edit_note, size: 20),
-                label: const Text('كتابة ملاحظة وتجهيز الرسالة'),
+                onPressed: () => _openWhatsAppFeedback(),
+                icon: const Icon(Icons.chat, size: 18, color: Color(0xFF25D366)),
+                label: const Text('تواصل عبر واتساب'),
               ),
             ],
           ),
