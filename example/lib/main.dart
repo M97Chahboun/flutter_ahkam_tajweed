@@ -159,6 +159,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
     final noteController = TextEditingController();
     final contactController = TextEditingController();
     TajweedIssueType selectedType = TajweedIssueType.incorrectRule;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
@@ -259,7 +260,7 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                         controller: contactController,
                         decoration: const InputDecoration(
                           labelText: 'الاسم أو وسيلة التواصل (اختياري)',
-                          hintText: 'اسمك أو حسابك للمتابعة',
+                          hintText: 'اسمك أو رقمك/بريدك للمتابعة',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -269,70 +270,146 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
                   child: const Text('إلغاء'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    final report = TajweedIssueReport(
-                      surahNumber: _selectedSurahId,
-                      surahName: _currentSurah.name,
-                      ayahNumber: _selectedAyahNumber,
-                      riwaya: _selectedStyle,
-                      verseText: _verseController.text.trim(),
-                      ruleArabicName: specificRuleName,
-                      ruleEnglishName: specificRuleEnglishName,
-                      issueType: selectedType,
-                      description: noteController.text.trim(),
-                      reporterContact: contactController.text.trim(),
-                    );
-                    await IssueReportingService.copyReportToClipboard(report);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('تم نسخ تقرير الملاحظة بصيغة Markdown بنجاح!'),
-                            ],
-                          ),
-                          backgroundColor: Color(0xFF0F766E),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final report = TajweedIssueReport(
+                            surahNumber: _selectedSurahId,
+                            surahName: _currentSurah.name,
+                            ayahNumber: _selectedAyahNumber,
+                            riwaya: _selectedStyle,
+                            verseText: _verseController.text.trim(),
+                            ruleArabicName: specificRuleName,
+                            ruleEnglishName: specificRuleEnglishName,
+                            issueType: selectedType,
+                            description: noteController.text.trim(),
+                            reporterContact: contactController.text.trim(),
+                          );
+                          await IssueReportingService.copyReportToClipboard(report);
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: Colors.white, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('تم نسخ تقرير الملاحظة بصيغة Markdown بنجاح!'),
+                                  ],
+                                ),
+                                backgroundColor: Color(0xFF0F766E),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
                   icon: const Icon(Icons.copy, size: 16),
-                  label: const Text('نسخ التقرير'),
+                  label: const Text('نسخ'),
                 ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF24292F),
+                    backgroundColor: const Color(0xFF0F766E),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   ),
-                  onPressed: () async {
-                    final report = TajweedIssueReport(
-                      surahNumber: _selectedSurahId,
-                      surahName: _currentSurah.name,
-                      ayahNumber: _selectedAyahNumber,
-                      riwaya: _selectedStyle,
-                      verseText: _verseController.text.trim(),
-                      ruleArabicName: specificRuleName,
-                      ruleEnglishName: specificRuleEnglishName,
-                      issueType: selectedType,
-                      description: noteController.text.trim(),
-                      reporterContact: contactController.text.trim(),
-                    );
-                    Navigator.of(context).pop();
-                    await IssueReportingService.openGitHubIssue(report);
-                  },
-                  icon: const Icon(Icons.open_in_new, size: 16),
-                  label: const Text(
-                    'فتح تذكرة على GitHub Issues',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final noteText = noteController.text.trim();
+                          if (noteText.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('الرجاء كتابة وصف الملاحظة قبل الإرسال'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
+
+                          final report = TajweedIssueReport(
+                            surahNumber: _selectedSurahId,
+                            surahName: _currentSurah.name,
+                            ayahNumber: _selectedAyahNumber,
+                            riwaya: _selectedStyle,
+                            verseText: _verseController.text.trim(),
+                            ruleArabicName: specificRuleName,
+                            ruleEnglishName: specificRuleEnglishName,
+                            issueType: selectedType,
+                            description: noteText,
+                            reporterContact: contactController.text.trim(),
+                          );
+
+                          final result = await IssueReportingService.submitViaBackendProxy(report);
+
+                          if (context.mounted) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                            Navigator.of(context).pop();
+
+                            if (result.success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Row(
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text('تم إرسال الملاحظة بنجاح وإنشاء التذكرة على GitHub!'),
+                                      ),
+                                    ],
+                                  ),
+                                  action: result.issueUrl != null
+                                      ? SnackBarAction(
+                                          label: 'عرض التذكرة',
+                                          textColor: Colors.amberAccent,
+                                          onPressed: () {
+                                            launchUrl(Uri.parse(result.issueUrl!), mode: LaunchMode.externalApplication);
+                                          },
+                                        )
+                                      : null,
+                                  backgroundColor: const Color(0xFF0F766E),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            } else {
+                              // If proxy failed, offer direct fallback
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('تعذر الإرسال التلقائي: ${result.errorMessage ?? ""}'),
+                                  action: SnackBarAction(
+                                    label: 'فتح GitHub يدوياً',
+                                    textColor: Colors.white,
+                                    onPressed: () => IssueReportingService.openGitHubIssue(report),
+                                  ),
+                                  backgroundColor: Colors.red.shade700,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 6),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send_rounded, size: 16),
+                  label: Text(
+                    isSubmitting ? 'جاري الإرسال...' : 'إرسال الملاحظة مباشرة',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
