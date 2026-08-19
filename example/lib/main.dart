@@ -545,18 +545,18 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
         ),
         actions: [
           Tooltip(
-            message: 'إبلاغ عن ملاحظة عبر واتساب',
+            message: 'إبلاغ أو تصويب حكم تجويدي',
             child: FilledButton.tonalIcon(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.15),
-                foregroundColor: const Color(0xFF1E7E34),
+                backgroundColor: const Color(0xFF0F766E).withValues(alpha: 0.12),
+                foregroundColor: const Color(0xFF0F766E),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () => _showFeedbackDialog(),
-              icon: const Icon(Icons.chat, size: 18, color: Color(0xFF25D366)),
+              icon: const Icon(Icons.rate_review_outlined, size: 18, color: Color(0xFF0F766E)),
               label: const Text(
-                'إبلاغ عن ملاحظة',
+                'إبلاغ / تصويب',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
@@ -1308,13 +1308,13 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0F766E),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => _showFeedbackDialog(),
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                icon: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 20),
                 label: const Text(
-                  'إرسال ملاحظة من التطبيق',
+                  'إبلاغ وتصويب حكم تجويدي',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
                 ),
               ),
@@ -1322,10 +1322,15 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: const BorderSide(color: Color(0xFF25D366)),
+                  foregroundColor: const Color(0xFF1E7E34),
                 ),
                 onPressed: () => _openWhatsAppFeedback(),
                 icon: const Icon(Icons.chat, size: 18, color: Color(0xFF25D366)),
-                label: const Text('تواصل مع صاحب المشروع عبر واتساب'),
+                label: const Text(
+                  'مراسلة صاحب المشروع (واتساب)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
