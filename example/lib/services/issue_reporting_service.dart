@@ -127,7 +127,7 @@ class TajweedIssueReport {
 
   /// URL to open a new GitHub Issue pre-filled with this report
   Uri toGitHubIssueUri() {
-    const repoUrl = 'https://github.com/M97Chahboun/flutter_ahkam_tajweed/issues/new';
+    const repoUrl = 'https://github.com/M97Chahboun/ahkam_tajweed/issues/new';
     final labels = ['bug', 'tajweed-rule', issueType.labelTag].join(',');
 
     final params = {

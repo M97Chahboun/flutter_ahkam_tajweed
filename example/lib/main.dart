@@ -273,21 +273,11 @@ class _TajweedHomePageState extends State<TajweedHomePage> {
                   onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
                   child: const Text('إلغاء'),
                 ),
-                OutlinedButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          _openWhatsAppFeedback(specificRuleName: specificRuleName);
-                        },
-                  icon: const Icon(Icons.chat, size: 16, color: Color(0xFF25D366)),
-                  label: const Text('تواصل مع صاحب المشروع'),
-                ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0F766E),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                   onPressed: isSubmitting
                       ? null
