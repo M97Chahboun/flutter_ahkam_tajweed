@@ -57,6 +57,7 @@ class QuranpediaService {
   }
 
   static List<QuranSurah>? _cachedSurahs;
+  static final Map<String, QuranAyahResult> _cachedAyahs = {};
 
   /// Fetches the list of all 114 Surahs from Quranpedia with local fallback
   static Future<List<QuranSurah>> getSurahs() async {
@@ -67,7 +68,7 @@ class QuranpediaService {
     try {
       final response = await http
           .get(Uri.parse('$baseUrl/surahs'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -92,29 +93,56 @@ class QuranpediaService {
     required RecitationStyleType style,
   }) async {
     final mushafId = getMushafIdForStyle(style);
+    final cacheKey = '$mushafId:$surahNumber:$ayahNumber';
+
+    if (_cachedAyahs.containsKey(cacheKey)) {
+      return _cachedAyahs[cacheKey]!;
+    }
+
     final url = '$baseUrl/mushafs/$mushafId/$surahNumber/$ayahNumber';
 
-    final response = await http
-        .get(Uri.parse(url))
-        .timeout(const Duration(seconds: 10));
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        final response = await http
+            .get(Uri.parse(url))
+            .timeout(const Duration(seconds: 20));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-      String rawText = (data['text'] as String? ?? '').trim();
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+          String rawText = (data['text'] as String? ?? '').trim();
 
-      // Clean leading Unicode BOM or zero-width spaces
-      rawText = rawText.replaceAll(RegExp(r'^[\uFEFF\u200B\u200C\u200D]+'), '').trim();
+          // Clean leading Unicode BOM or zero-width spaces
+          rawText = rawText.replaceAll(RegExp(r'^[\uFEFF\u200B\u200C\u200D]+'), '').trim();
 
-      return QuranAyahResult(
-        surahNumber: surahNumber,
-        ayahNumber: ayahNumber,
-        text: rawText,
-        marker: data['marker'] as String?,
-        mushafId: mushafId,
-      );
-    } else {
-      throw Exception('فشل جلب الآية من خادم Quranpedia (${response.statusCode})');
+          final result = QuranAyahResult(
+            surahNumber: surahNumber,
+            ayahNumber: ayahNumber,
+            text: rawText,
+            marker: data['marker'] as String?,
+            mushafId: mushafId,
+          );
+
+          _cachedAyahs[cacheKey] = result;
+          return result;
+        } else if (response.statusCode == 504) {
+          if (attempt == 1) {
+            await Future.delayed(const Duration(milliseconds: 1000));
+            continue;
+          }
+          throw Exception('استغرق خادم المصحف (Quranpedia) وقتاً طويلاً للاستجابة (504). يرجى المحاولة ثانية.');
+        } else {
+          throw Exception('فشل جلب الآية من الخادم (${response.statusCode})');
+        }
+      } catch (e) {
+        if (attempt == 1) {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          continue;
+        }
+        rethrow;
+      }
     }
+
+    throw Exception('تعذر جلب الآية بعد محاولتين.');
   }
 
   // Fallback 114 Surahs
