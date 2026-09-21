@@ -39,7 +39,8 @@ class QuranAyahResult {
 }
 
 class QuranpediaService {
-  static const String baseUrl = 'https://api.quranpedia.net/v1';
+  /// Base URL routed through Tathbeet backend proxy to avoid CORS restrictions on Flutter Web
+  static const String baseUrl = 'https://tathbeet.pythonanywhere.com/api/quranpedia/v1';
 
   // Mushaf IDs in Quranpedia
   static const int hafsMushafId = 1;  // مصحف حفص
